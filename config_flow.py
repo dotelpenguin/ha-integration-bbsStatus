@@ -1,6 +1,7 @@
 """Config flow for BBS Status integration."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -33,21 +34,35 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     
     url = f"http://{host}:{port}/status"
     
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
-                if response.status == 200:
-                    result = await response.json()
-                    if "status" in result:
-                        return {"title": f"BBS Status - {host}:{port}"}
+    # Retry up to 10 times with exponential backoff
+    for attempt in range(10):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        if "status" in result:
+                            return {"title": f"BBS Status - {host}:{port}"}
+                        else:
+                            raise CannotConnect("Invalid response format")
                     else:
-                        raise CannotConnect("Invalid response format")
-                else:
-                    raise CannotConnect(f"HTTP {response.status}")
-    except aiohttp.ClientError as err:
-        raise CannotConnect(f"Connection error: {err}")
-    except Exception as err:
-        raise CannotConnect(f"Unexpected error: {err}")
+                        if attempt == 9:  # Last attempt
+                            raise CannotConnect(f"HTTP {response.status}")
+                        continue  # Retry on HTTP error
+        except aiohttp.ClientError as err:
+            if attempt == 9:  # Last attempt
+                raise CannotConnect(f"Connection error after 10 attempts: {err}")
+            continue  # Retry on connection error
+        except Exception as err:
+            if attempt == 9:  # Last attempt
+                raise CannotConnect(f"Unexpected error after 10 attempts: {err}")
+            continue  # Retry on other errors
+        
+        # Wait before retry (exponential backoff)
+        if attempt < 9:
+            await asyncio.sleep(2 ** attempt)  # 1s, 2s, 4s, 8s, etc.
+    
+    raise CannotConnect("Failed to connect after 10 attempts")
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
