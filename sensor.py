@@ -69,28 +69,28 @@ class BBSStatusDataUpdateCoordinator(DataUpdateCoordinator):
                                     _LOGGER.debug(f"Successfully fetched BBS Status data from: {url}")
                                     return data["status"]
                                 else:
-                                    last_error = f"Invalid response format: missing 'status' key in response"
-                                    _LOGGER.warning(f"Invalid response format on attempt {attempt + 1}: {last_error}")
+                                    last_error = f"Invalid response format: missing 'status' key in response from {url}"
+                                    _LOGGER.warning(f"Invalid response format on attempt {attempt + 1} for {url}: {last_error}")
                                     if attempt == 9:  # Last attempt
                                         raise UpdateFailed(last_error)
                                     continue  # Retry on invalid format
                             else:
-                                last_error = f"HTTP {response.status}: {response.reason}"
-                                _LOGGER.warning(f"HTTP error on attempt {attempt + 1}: {last_error}")
+                                last_error = f"HTTP {response.status}: {response.reason} from {url}"
+                                _LOGGER.warning(f"HTTP error on attempt {attempt + 1} for {url}: {last_error}")
                                 if attempt == 9:  # Last attempt
                                     raise UpdateFailed(last_error)
                                 continue  # Retry on HTTP error
             except aiohttp.ClientError as err:
-                last_error = f"Connection error: {err}"
-                _LOGGER.warning(f"Connection error on attempt {attempt + 1}: {last_error}")
+                last_error = f"Connection error to {url}: {err}"
+                _LOGGER.warning(f"Connection error on attempt {attempt + 1} for {url}: {last_error}")
                 if attempt == 9:  # Last attempt
-                    raise UpdateFailed(f"Connection failed after 10 attempts. Last error: {last_error}")
+                    raise UpdateFailed(f"Connection failed after 10 attempts to {url}. Last error: {last_error}")
                 continue  # Retry on connection error
             except Exception as err:
-                last_error = f"Unexpected error: {err}"
-                _LOGGER.warning(f"Unexpected error on attempt {attempt + 1}: {last_error}")
+                last_error = f"Unexpected error accessing {url}: {err}"
+                _LOGGER.warning(f"Unexpected error on attempt {attempt + 1} for {url}: {last_error}")
                 if attempt == 9:  # Last attempt
-                    raise UpdateFailed(f"Unexpected error after 10 attempts. Last error: {last_error}")
+                    raise UpdateFailed(f"Unexpected error after 10 attempts accessing {url}. Last error: {last_error}")
                 continue  # Retry on other errors
             
             # Wait before retry (exponential backoff)
