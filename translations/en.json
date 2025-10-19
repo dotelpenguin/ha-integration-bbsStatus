@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "BBS Status Configuration",
+        "description": "Configure your BBS Status integration",
+        "data": {
+          "host": "Host/IP Address",
+          "port": "Port",
+          "scan_interval": "Scan Interval (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to BBS Status endpoint",
+      "unknown": "Unknown error occurred"
+    },
+    "abort": {
+      "already_configured": "BBS Status is already configured"
+    }
+  }
+}
