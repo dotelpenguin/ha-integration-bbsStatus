@@ -56,37 +56,50 @@ class BBSStatusDataUpdateCoordinator(DataUpdateCoordinator):
         url = f"http://{self.host}:{self.port}/status"
         
         # Retry up to 10 times with exponential backoff
+        last_error = None
         for attempt in range(10):
             try:
+                _LOGGER.debug(f"Fetching BBS Status data (attempt {attempt + 1}/10): {url}")
                 async with async_timeout.timeout(10):
                     async with aiohttp.ClientSession() as session:
                         async with session.get(url) as response:
                             if response.status == 200:
                                 data = await response.json()
                                 if "status" in data:
+                                    _LOGGER.debug(f"Successfully fetched BBS Status data from: {url}")
                                     return data["status"]
                                 else:
+                                    last_error = f"Invalid response format: missing 'status' key in response"
+                                    _LOGGER.warning(f"Invalid response format on attempt {attempt + 1}: {last_error}")
                                     if attempt == 9:  # Last attempt
-                                        raise UpdateFailed("Invalid response format")
+                                        raise UpdateFailed(last_error)
                                     continue  # Retry on invalid format
                             else:
+                                last_error = f"HTTP {response.status}: {response.reason}"
+                                _LOGGER.warning(f"HTTP error on attempt {attempt + 1}: {last_error}")
                                 if attempt == 9:  # Last attempt
-                                    raise UpdateFailed(f"HTTP {response.status}")
+                                    raise UpdateFailed(last_error)
                                 continue  # Retry on HTTP error
             except aiohttp.ClientError as err:
+                last_error = f"Connection error: {err}"
+                _LOGGER.warning(f"Connection error on attempt {attempt + 1}: {last_error}")
                 if attempt == 9:  # Last attempt
-                    raise UpdateFailed(f"Connection error after 10 attempts: {err}")
+                    raise UpdateFailed(f"Connection failed after 10 attempts. Last error: {last_error}")
                 continue  # Retry on connection error
             except Exception as err:
+                last_error = f"Unexpected error: {err}"
+                _LOGGER.warning(f"Unexpected error on attempt {attempt + 1}: {last_error}")
                 if attempt == 9:  # Last attempt
-                    raise UpdateFailed(f"Unexpected error after 10 attempts: {err}")
+                    raise UpdateFailed(f"Unexpected error after 10 attempts. Last error: {last_error}")
                 continue  # Retry on other errors
             
             # Wait before retry (exponential backoff)
             if attempt < 9:
-                await asyncio.sleep(2 ** attempt)  # 1s, 2s, 4s, 8s, etc.
+                wait_time = 2 ** attempt
+                _LOGGER.debug(f"Waiting {wait_time} seconds before retry...")
+                await asyncio.sleep(wait_time)
         
-        raise UpdateFailed("Failed to connect after 10 attempts")
+        raise UpdateFailed(f"Failed to fetch data after 10 attempts. Last error: {last_error}")
 
 
 class BBSStatusSensor(SensorEntity):

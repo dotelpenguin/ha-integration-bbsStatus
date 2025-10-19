@@ -12,8 +12,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Unable to connect to BBS Status endpoint",
-      "unknown": "Unknown error occurred"
+      "cannot_connect": "Unable to connect to BBS Status endpoint. Check that the BBS server is running and accessible at the specified host and port. The endpoint should be available at http://{host}:{port}/status",
+      "unknown": "Unknown error occurred during configuration"
     },
     "abort": {
       "already_configured": "BBS Status is already configured"
