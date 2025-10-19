@@ -1,0 +1,7 @@
+{
+  "name": "BBS Status",
+  "content_in_root": false,
+  "filename": "bbs_status",
+  "country": ["US"],
+  "homeassistant": "2023.1.0"
+}
